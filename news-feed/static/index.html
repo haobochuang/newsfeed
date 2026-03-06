@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>News Feed</title>
+  <script>
+    (function(){
+      var dark = localStorage.getItem("nf_dark");
+      if (dark === "1" || (dark === null && matchMedia("(prefers-color-scheme: dark)").matches))
+        document.documentElement.setAttribute("data-theme", "dark");
+    })();
+  </script>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>News Feed</h1>
+      <div class="header-actions">
+        <button id="setup-btn" aria-label="Manage feeds">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+        <button id="add-feed-btn" aria-label="Add feed">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+        <button id="view-toggle" aria-label="Toggle view">
+          <!-- grid icon (shown in card mode) -->
+          <svg class="icon-grid" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+          </svg>
+          <!-- list icon (shown in list mode) -->
+          <svg class="icon-list" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+        </button>
+        <button id="fav-toggle" aria-label="Favorites">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+          <span id="fav-count" class="fav-badge" hidden>0</span>
+        </button>
+        <button id="dark-toggle" aria-label="Toggle dark mode">
+          <!-- moon SVG (shown in light mode) -->
+          <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+          <!-- sun SVG (shown in dark mode) -->
+          <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <nav id="topic-filters">
+      <button class="topic-btn active" data-topic="">All</button>
+    </nav>
+  </header>
+
+  <section id="setup-view" class="hidden">
+    <div class="setup-header">
+      <h2 class="setup-title">Manage Feeds</h2>
+      <button id="setup-back-btn" class="setup-back-btn">&#8592; Back to News</button>
+    </div>
+    <div id="setup-feed-list" class="setup-feed-list"></div>
+  </section>
+
+  <div id="fav-backdrop" class="fav-backdrop hidden"></div>
+  <div id="fav-panel" class="fav-panel hidden" aria-label="Favorites panel">
+    <div class="fav-panel-header">
+      <span class="fav-panel-title">Favorites</span>
+      <button id="fav-remove-all" class="fav-remove-all" aria-label="Remove all favorites">Remove all</button>
+      <button id="fav-close" aria-label="Close favorites">&times;</button>
+    </div>
+    <div id="fav-list" class="fav-list"></div>
+  </div>
+
+  <main>
+    <div id="status" class="status hidden"></div>
+    <div id="news-grid" class="news-grid"></div>
+  </main>
+
+  <!-- Add Feed Modal -->
+  <div id="add-feed-backdrop" class="modal-backdrop hidden"></div>
+  <div id="add-feed-modal" class="modal hidden" role="dialog" aria-label="Add RSS feed">
+    <div class="modal-header">
+      <span class="modal-title">Add RSS Feed</span>
+      <button id="add-feed-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-tabs">
+      <button class="modal-tab active" data-tab="paste">Paste URL</button>
+      <button class="modal-tab" data-tab="search">Search</button>
+    </div>
+    <div class="modal-body">
+      <!-- Tab: Paste URL -->
+      <div id="tab-paste" class="tab-panel">
+        <label for="feed-url-input">Feed URL</label>
+        <input id="feed-url-input" type="url" placeholder="https://example.com/feed.rss" autocomplete="off" />
+      </div>
+      <!-- Tab: Search -->
+      <div id="tab-search" class="tab-panel hidden">
+        <label for="feed-search-input">Search keyword</label>
+        <div class="search-row">
+          <input id="feed-search-input" type="text" placeholder="e.g. technology, science…" autocomplete="off" />
+          <button id="feed-search-btn">Search</button>
+        </div>
+        <ul id="feed-search-results" class="feed-results"></ul>
+      </div>
+      <!-- Shared topic input -->
+      <label for="feed-topic-input">Topic</label>
+      <input id="feed-topic-input" type="text" placeholder="e.g. Technology" list="topic-suggestions" autocomplete="off" />
+      <datalist id="topic-suggestions"></datalist>
+      <div id="add-feed-status" class="modal-status hidden"></div>
+      <button id="add-feed-submit" class="modal-submit">Add Feed</button>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

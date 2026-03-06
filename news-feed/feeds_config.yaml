@@ -1,0 +1,21 @@
+feeds:
+- topic: Technology
+  url: https://feeds.feedburner.com/TechCrunch
+- topic: Technology
+  url: https://techcrunch.com/feed/
+- topic: World
+  url: https://feeds.bbci.co.uk/news/world/rss.xml
+- topic: Technology
+  url: https://feeds.bbci.co.uk/news/technology/rss.xml
+- topic: Science
+  url: https://www.theguardian.com/science/rss
+- topic: Science
+  url: https://www.nasa.gov/rss/dyn/breaking_news.rss
+- topic: Photography
+  url: https://petapixel.com/feed/
+- topic: Photography
+  url: http://www.dpreview.com/feeds/news.xml
+- topic: Apple
+  url: http://appleinsider.com/rss/news/
+- topic: Snowboard
+  url: http://snowboardmag.com/feed
