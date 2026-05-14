@@ -8,6 +8,23 @@ const favBackdrop = document.getElementById("fav-backdrop");
 const favList = document.getElementById("fav-list");
 const viewToggleBtn = document.getElementById("view-toggle");
 const darkToggle = document.getElementById("dark-toggle");
+const notifToggleBtn = document.getElementById("notif-toggle");
+const refreshCountdownEl = document.getElementById("refresh-countdown");
+const jellyToggleBtn = document.getElementById("jelly-toggle");
+const jellyBg = document.getElementById("jelly-bg");
+
+// Reader modal refs
+const readerBackdrop = document.getElementById("reader-backdrop");
+const readerModal = document.getElementById("reader-modal");
+const readerClose = document.getElementById("reader-close");
+const readerImage = document.getElementById("reader-image");
+const readerImageWrap = document.getElementById("reader-image-wrap");
+const readerTitle = document.getElementById("reader-title");
+const readerSource = document.getElementById("reader-source");
+const readerDate = document.getElementById("reader-date");
+const readerSummary = document.getElementById("reader-summary");
+const readerLink = document.getElementById("reader-link");
+const readerTopic = document.getElementById("reader-topic");
 
 // Setup view refs
 const setupBtn = document.getElementById("setup-btn");
@@ -105,6 +122,7 @@ applyTheme();
 let activeTopic = "";
 let activeTab = "paste";
 let selectedSearchUrl = "";
+let selectedIdx = -1;
 
 // --- Pagination ---
 const PAGE_SIZE = { card: 20, list: 30 };
@@ -216,7 +234,8 @@ function cardTemplate(a, inPanel = false) {
     ? `<button class="fav-remove-btn" data-link="${escAttr(a.link)}" aria-label="Remove from favorites">&times; Remove</button>`
     : `<button class="collect-btn${collected ? " collected" : ""}" data-link="${escAttr(a.link)}" aria-label="Save to favorites">${heartSvg}</button>`;
   return `
-    <article class="card">
+    <article class="card" data-article="${escData(a)}">
+      ${a.image ? `<div class="card-img-wrap"><img class="card-img" src="${escAttr(a.image)}" alt="" loading="lazy" onerror="this.closest('.card-img-wrap').remove()"></div>` : ""}
       <div class="card-meta">
         <span class="card-topic" style="background:${topicBg(a.topic)}">${escHtml(a.topic)}</span>
         <span>${escHtml(formatDate(a.published))}</span>
@@ -482,6 +501,7 @@ function renderSkeletons(count = 6) {
 function renderCards(articles) {
   allArticles = articles;
   displayedCount = 0;
+  selectedIdx = -1;
   scrollObserver.unobserve(sentinel);
 
   if (!articles.length) {
@@ -496,6 +516,10 @@ function renderCards(articles) {
   displayedCount = first.length;
 
   if (displayedCount < allArticles.length) scrollObserver.observe(sentinel);
+}
+
+function escData(obj) {
+  return JSON.stringify(obj).replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 }
 
 function escHtml(str) {
@@ -585,6 +609,234 @@ modalTabs.forEach(btn => {
 addFeedBtn.addEventListener("click", openAddFeedModal);
 addFeedClose.addEventListener("click", closeAddFeedModal);
 addFeedBackdrop.addEventListener("click", closeAddFeedModal);
+
+// --- Reader modal ---
+
+function openReader(article) {
+  readerTopic.textContent = article.topic;
+  readerTopic.style.background = topicBg(article.topic);
+  readerTitle.textContent = article.title;
+  readerSource.textContent = article.source;
+  readerDate.textContent = formatDate(article.published);
+  readerSummary.textContent = article.summary || "";
+  readerLink.href = escAttr(article.link);
+
+  if (article.image) {
+    readerImage.src = article.image;
+    readerImage.alt = article.title;
+    readerImageWrap.classList.remove("hidden");
+  } else {
+    readerImageWrap.classList.add("hidden");
+    readerImage.src = "";
+  }
+
+  readerModal.classList.remove("hidden");
+  readerBackdrop.classList.remove("hidden");
+}
+
+function closeReader() {
+  readerModal.classList.add("hidden");
+  readerBackdrop.classList.add("hidden");
+}
+
+readerClose.addEventListener("click", closeReader);
+readerBackdrop.addEventListener("click", closeReader);
+
+// --- Keyboard navigation ---
+
+function getVisibleCards() {
+  return [...grid.querySelectorAll(".card")];
+}
+
+function setSelected(idx) {
+  const cards = getVisibleCards();
+  if (selectedIdx >= 0 && selectedIdx < cards.length) {
+    cards[selectedIdx].classList.remove("kb-selected");
+  }
+  selectedIdx = idx;
+  if (idx >= 0 && idx < cards.length) {
+    cards[idx].classList.add("kb-selected");
+    cards[idx].scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { closeReader(); return; }
+
+  const tag = document.activeElement?.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+  const modalOpen = !readerModal.classList.contains("hidden") ||
+    !addFeedModal.classList.contains("hidden") ||
+    !favPanel.classList.contains("hidden");
+  if (modalOpen) return;
+
+  const cards = getVisibleCards();
+
+  switch (e.key) {
+    case "j":
+    case "ArrowDown":
+      e.preventDefault();
+      setSelected(Math.min(selectedIdx + 1, cards.length - 1));
+      break;
+    case "k":
+    case "ArrowUp":
+      e.preventDefault();
+      setSelected(Math.max(selectedIdx <= 0 ? 0 : selectedIdx - 1, 0));
+      break;
+    case "Enter":
+      if (selectedIdx >= 0 && selectedIdx < cards.length) {
+        const raw = cards[selectedIdx].dataset.article;
+        if (raw) { selectedIdx = -1; openReader(JSON.parse(raw)); }
+      }
+      break;
+    case "f":
+      if (selectedIdx >= 0 && selectedIdx < cards.length) {
+        const btn = cards[selectedIdx].querySelector(".collect-btn");
+        if (btn) btn.click();
+      }
+      break;
+    case "d":
+      setDarkMode(!isDarkMode());
+      break;
+  }
+});
+
+document.addEventListener("click", (e) => {
+  const card = e.target.closest(".card");
+  if (!card) return;
+  if (e.target.closest("a, button")) return;
+  const raw = card.dataset.article;
+  if (!raw) return;
+  openReader(JSON.parse(raw));
+});
+
+// --- Auto-refresh & Notifications ---
+
+const AUTO_REFRESH_MS = 5 * 60 * 1000;
+let notifEnabled = localStorage.getItem("nf_notif") === "1";
+let knownLinks = new Set(JSON.parse(localStorage.getItem("nf_known_links") || "[]"));
+let refreshSecsLeft = AUTO_REFRESH_MS / 1000;
+
+function updateNotifBtn() {
+  notifToggleBtn.classList.toggle("active", notifEnabled);
+}
+
+function saveKnownLinks(articles) {
+  articles.forEach(a => knownLinks.add(a.link));
+  try { localStorage.setItem("nf_known_links", JSON.stringify([...knownLinks])); } catch { /* quota */ }
+}
+
+function formatCountdown(secs) {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function startAutoRefresh() {
+  refreshCountdownEl.textContent = formatCountdown(refreshSecsLeft);
+
+  setInterval(() => {
+    refreshSecsLeft = Math.max(0, refreshSecsLeft - 1);
+    refreshCountdownEl.textContent = formatCountdown(refreshSecsLeft);
+  }, 1000);
+
+  setInterval(async () => {
+    refreshSecsLeft = AUTO_REFRESH_MS / 1000;
+    try {
+      const articles = await fetchNews(activeTopic);
+      const newArticles = articles.filter(a => !knownLinks.has(a.link));
+      renderCards(articles);
+      saveKnownLinks(articles);
+      if (newArticles.length && notifEnabled && "Notification" in window && Notification.permission === "granted") {
+        newArticles.slice(0, 3).forEach(a => {
+          new Notification(a.title, { body: (a.summary || a.source).slice(0, 90) });
+        });
+      }
+    } catch { /* silent — user will see stale data, that's OK */ }
+  }, AUTO_REFRESH_MS);
+}
+
+if ("Notification" in window) {
+  notifToggleBtn.addEventListener("click", async () => {
+    if (!notifEnabled) {
+      const perm = await Notification.requestPermission();
+      if (perm === "granted") {
+        notifEnabled = true;
+        localStorage.setItem("nf_notif", "1");
+      }
+    } else {
+      notifEnabled = false;
+      localStorage.setItem("nf_notif", "0");
+    }
+    updateNotifBtn();
+  });
+} else {
+  notifToggleBtn.hidden = true;
+}
+
+// --- Jellyfish theme ---
+
+let jellyActive = localStorage.getItem("nf_jelly") === "1";
+
+function rnd(min, max) { return Math.random() * (max - min) + min; }
+
+function spawnJellyfish(n = 8) {
+  for (let i = 0; i < n; i++) {
+    const el = document.createElement("div");
+    el.className = "jellyfish";
+    const size = rnd(50, 130);
+    const hue = Math.round(rnd(190, 280));
+    const sat = Math.round(rnd(50, 70));
+    const lit = Math.round(rnd(40, 65));
+    el.style.cssText = [
+      `left:${rnd(5, 90).toFixed(1)}%`,
+      `top:${rnd(5, 85).toFixed(1)}%`,
+      `width:${size.toFixed(0)}px`,
+      `height:${size.toFixed(0)}px`,
+      `background:hsl(${hue},${sat}%,${lit}%)`,
+      `color:hsl(${hue},${sat}%,${lit}%)`,
+      `animation-duration:${rnd(4, 9).toFixed(1)}s`,
+      `animation-delay:${rnd(0, 5).toFixed(1)}s`,
+    ].join(";");
+    jellyBg.appendChild(el);
+  }
+}
+
+function spawnBubbles(n = 20) {
+  for (let i = 0; i < n; i++) {
+    const el = document.createElement("div");
+    el.className = "bubble";
+    const size = rnd(2, 8).toFixed(1);
+    el.style.cssText = [
+      `left:${rnd(0, 100).toFixed(1)}%`,
+      `bottom:${rnd(-5, 5).toFixed(1)}%`,
+      `width:${size}px`,
+      `height:${size}px`,
+      `animation-duration:${rnd(5, 13).toFixed(1)}s`,
+      `animation-delay:${rnd(0, 10).toFixed(1)}s`,
+    ].join(";");
+    jellyBg.appendChild(el);
+  }
+}
+
+function applyJellyfish(active) {
+  jellyActive = active;
+  if (active) {
+    document.documentElement.setAttribute("data-jelly", "");
+    jellyBg.innerHTML = "";
+    spawnJellyfish(8);
+    spawnBubbles(20);
+    jellyToggleBtn.classList.add("active");
+  } else {
+    document.documentElement.removeAttribute("data-jelly");
+    jellyBg.innerHTML = "";
+    jellyToggleBtn.classList.remove("active");
+  }
+  localStorage.setItem("nf_jelly", active ? "1" : "0");
+}
+
+jellyToggleBtn.addEventListener("click", () => applyJellyfish(!jellyActive));
 
 feedSearchBtn.addEventListener("click", async () => {
   const q = feedSearchInput.value.trim();
@@ -708,6 +960,7 @@ async function loadNews(topic = "") {
 
 async function init() {
   updateBadge();
+  updateNotifBtn();
   setViewMode(viewMode);
   try {
     const topics = await fetchTopics();
@@ -716,6 +969,9 @@ async function init() {
     // Topics failed — still try to show all news
   }
   await loadNews();
+  saveKnownLinks(allArticles);
+  startAutoRefresh();
+  applyJellyfish(jellyActive);
 }
 
 init();

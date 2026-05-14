@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
+  <div id="jelly-bg" class="jelly-bg"></div>
   <header>
     <div class="header-top">
       <h1>News Feed</h1>
@@ -59,6 +60,16 @@
             <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
           </svg>
         </button>
+        <button id="notif-toggle" aria-label="Toggle notifications">
+          <svg class="icon-bell-off" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <svg class="icon-bell-on" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+        </button>
+        <span id="refresh-countdown" class="refresh-countdown"></span>
+        <button id="jelly-toggle" aria-label="Toggle jellyfish theme">🪼</button>
       </div>
     </div>
     <nav id="topic-filters">
@@ -121,6 +132,26 @@
       <datalist id="topic-suggestions"></datalist>
       <div id="add-feed-status" class="modal-status hidden"></div>
       <button id="add-feed-submit" class="modal-submit">Add Feed</button>
+    </div>
+  </div>
+
+  <div id="reader-backdrop" class="modal-backdrop hidden"></div>
+  <div id="reader-modal" class="reader-modal hidden" role="dialog" aria-label="Article reader">
+    <div class="reader-header">
+      <span id="reader-topic" class="card-topic"></span>
+      <button id="reader-close" aria-label="Close">&times;</button>
+    </div>
+    <div id="reader-image-wrap" class="reader-image-wrap hidden">
+      <img id="reader-image" class="reader-image" alt="" />
+    </div>
+    <div class="reader-body">
+      <div id="reader-title" class="reader-title"></div>
+      <div class="reader-meta">
+        <span id="reader-source" class="reader-source"></span>
+        <span id="reader-date" class="reader-date"></span>
+      </div>
+      <p id="reader-summary" class="reader-summary"></p>
+      <a id="reader-link" class="reader-link" href="#" target="_blank" rel="noopener noreferrer">Read full article &rarr;</a>
     </div>
   </div>
 

@@ -30,6 +30,18 @@ def save_config(feeds: list[dict]):
         yaml.dump({"feeds": feeds}, f, allow_unicode=True)
 
 
+def get_image(entry) -> str:
+    if getattr(entry, "media_thumbnail", None):
+        return entry.media_thumbnail[0].get("url", "")
+    for m in getattr(entry, "media_content", []):
+        if m.get("type", "").startswith("image"):
+            return m.get("url", "")
+    for enc in getattr(entry, "enclosures", []):
+        if enc.get("type", "").startswith("image"):
+            return enc.get("href", "")
+    return ""
+
+
 def fetch_feed(url: str, topic: str) -> list[dict]:
     now = time.time()
     cached = _cache.get(url)
@@ -56,6 +68,7 @@ def fetch_feed(url: str, topic: str) -> list[dict]:
                 "summary": summary,
                 "published": published,
                 "source": parsed.feed.get("title", url),
+                "image": get_image(entry),
             })
         _cache[url] = {"fetched_at": now, "entries": entries}
 
