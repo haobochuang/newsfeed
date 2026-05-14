@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+news-feed/cache.json
+.claude/

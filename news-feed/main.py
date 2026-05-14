@@ -1,5 +1,6 @@
 import re
 import time
+import json
 import yaml
 import httpx
 import feedparser
@@ -11,12 +12,31 @@ from pydantic import BaseModel
 
 BASE_DIR = Path(__file__).parent
 CONFIG_PATH = BASE_DIR / "feeds_config.yaml"
+CACHE_FILE = BASE_DIR / "cache.json"
 CACHE_TTL = 900  # 15 minutes
 
 app = FastAPI(title="News Feed")
 
-# In-memory cache: {url: {"fetched_at": float, "entries": list}}
-_cache: dict = {}
+
+def _load_cache() -> dict:
+    try:
+        data = json.loads(CACHE_FILE.read_text())
+        if isinstance(data, dict):
+            return data
+    except Exception:
+        pass
+    return {}
+
+
+def _save_cache() -> None:
+    try:
+        CACHE_FILE.write_text(json.dumps(_cache))
+    except Exception:
+        pass
+
+
+# Persistent cache: {url: {"fetched_at": float, "entries": list}}
+_cache: dict = _load_cache()
 
 
 def load_config() -> list[dict]:
@@ -71,6 +91,7 @@ def fetch_feed(url: str, topic: str) -> list[dict]:
                 "image": get_image(entry),
             })
         _cache[url] = {"fetched_at": now, "entries": entries}
+        _save_cache()
 
     return [dict(e, topic=topic) for e in entries]
 
